@@ -81,4 +81,4 @@ dmypy.json
 .python-version
 
 # Claude Code
-.claude/
+.claude/settings.local.json

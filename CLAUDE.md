@@ -45,7 +45,7 @@ NOTION_DATABASE_ID=your_database_id
 
 ## プロジェクト構造
 ```
-manager-agent/
+team-operations/
 ├── agents/
 │   ├── report_writer.py    # 週報作成エージェント
 │   ├── reviewer.py          # レビューエージェント

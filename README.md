@@ -49,8 +49,8 @@
 
 1. **リポジトリをクローン**
    ```bash
-   git clone https://github.com/your-username/manager-agent.git
-   cd manager-agent
+   git clone https://github.com/your-username/team-operations.git
+   cd team-operations
    ```
 
 2. **仮想環境を作成**
@@ -180,7 +180,7 @@ uv run pytest --cov=agents --cov=tools --cov=config tests/
 ## 📁 プロジェクト構造
 
 ```
-manager-agent/
+team-operations/
 ├── agents/              # エージェント実装
 │   ├── base_agent.py    # ベースエージェントクラス
 │   ├── report_writer.py # 週報作成エージェント

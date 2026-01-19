@@ -1,5 +1,5 @@
 [project]
-name = "manager-agent"
+name = "team-operations"
 version = "0.1.0"
 description = "週報作成マルチエージェントシステム"
 requires-python = ">=3.9"
