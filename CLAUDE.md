@@ -1,45 +1,19 @@
-# 週報作成自動化システム
+# CLAUDE.md
 
 ## プロジェクト概要
 
-Claude Codeのスキルとコマンドを使用して、Notionの情報から自動的に週報を作成するシステムです。
+松尾研究所 共同研究 MLシステム開発チームのあらゆる業務を効率化するプロジェクトです．
 
-## 技術スタック
+## Notion
 
-- **AI**: Claude Code
-- **外部連携**: Notion API（MCP経由）
-- **設定**: `.mcp.json` でNotion MCPサーバーを設定
+共同研究 MLシステム開発チームのNotionページ:
+https://www.notion.so/1304bc176b2b80189051dd7137f86054?v=2424bc176b2b8066af31000c9a3168a6
 
-## プロジェクト構造
+## 役割
 
-```
-team-operations/
-├── .claude/
-│   ├── commands/
-│   │   └── create-weekly-report.md  # 週報作成コマンド（詳細版）
-│   ├── skills/
-│   │   └── weekly-report/
-│   │       ├── SKILL.md             # 週報作成スキル
-│   │       └── template.md          # 週報テンプレート
-│   ├── settings.json                # プロジェクト設定
-│   └── settings.local.json          # ローカル設定（git対象外）
-├── .mcp.json                        # MCP設定（Notion API）
-├── CLAUDE.md                        # このファイル
-└── README.md                        # プロジェクト説明
-```
+Notionから情報を取得し，あらゆる事務作業やマネジメント業務を支援してください．
 
-## 使い方
-
-### 週報を作成する
-
-```
-/weekly-report
-```
-
-または自然言語で:
-- 「週報を作成して」
-- 「create weekly report」
-- 「週次報告を作成したい」
+## 週報作成の使い方
 
 ### 週報作成の流れ
 
@@ -55,23 +29,13 @@ team-operations/
 - DB: Engineering Meeting Management
 - 詳細なテンプレートは `.claude/skills/weekly-report/template.md` を参照
 
-## 設定
+## 開発環境
 
-### MCP設定 (`.mcp.json`)
-
-Notion APIへの接続設定。APIキーは環境変数または設定ファイルで管理。
-
-### ローカル設定 (`.claude/settings.local.json`)
-
-個人の設定（git対象外）。
+- Python環境: 必ず`uv`を使用してください
+- **ブラウザ自動化**: agent-browserスキル または chrome-devtools MCP
 
 ## 注意事項
 
-- 確証が薄い情報には `<確認してください>` タグが付与される
+- 週報作成時に，確証が薄い情報には `<確認してください>` タグが付与される
 - 出典は `[src: MeetingNote YYYY-MM-DD]` 形式で記載される
 - 週報作成後は内容を確認してから送信すること
-
-## 参考資料
-
-- [Notion API Documentation](https://developers.notion.com/)
-- [Claude Code Documentation](https://docs.anthropic.com/claude-code)
