@@ -29,13 +29,15 @@ python-pptxを使用して松尾研究所テンプレート準拠のプレゼン
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
 
 # テンプレートを開く
 prs = Presentation('references/松尾研究所テンプレ_v2_DLしてお使いください.pptx')
 
 # 既存スライド（サンプル9枚）を全削除
+# Note: python-pptx にはスライド削除の公式APIがないため、
+# 内部XMLを直接操作している。python-pptx 1.0.2 で動作確認済み。
 while len(prs.slides._sldIdLst) > 0:
     rId = prs.slides._sldIdLst[0].get(qn('r:id'))
     prs.part.drop_rel(rId)
@@ -415,11 +417,10 @@ def add_free_content_slide(prs, title, source_text=None, page_num=None):
 
 ```python
 from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 
 def add_text_box(slide, x, y, w, h, text, font_name="Hiragino Kaku Gothic Pro W3",
-                 font_size=16, bold=False, color=None, align=PP_ALIGN.LEFT,
-                 valign=MSO_ANCHOR.MIDDLE):
+                 font_size=16, bold=False, color=None, align=PP_ALIGN.LEFT):
     txBox = slide.shapes.add_textbox(x, y, w, h)
     tf = txBox.text_frame
     tf.word_wrap = True
@@ -432,9 +433,6 @@ def add_text_box(slide, x, y, w, h, text, font_name="Hiragino Kaku Gothic Pro W3
     run.font.bold = bold
     if color:
         run.font.color.rgb = color
-    # 垂直方向の配置
-    txBox.text_frame.paragraphs[0].space_before = Pt(0)
-    txBox.text_frame.paragraphs[0].space_after = Pt(0)
     return txBox
 ```
 
@@ -629,7 +627,7 @@ def add_styled_table(slide, headers, rows, x=None, y=None, w=None, col_widths=No
             cell.text = str(cell_text)
             # スタイル
             for paragraph in cell.text_frame.paragraphs:
-                paragraph.alignment = PP_ALIGN.LEFT if j == 0 else PP_ALIGN.LEFT
+                paragraph.alignment = PP_ALIGN.LEFT
                 for run in paragraph.runs:
                     run.font.name = "Hiragino Kaku Gothic Pro W3"
                     run.font.size = Pt(body_font_size)
@@ -711,7 +709,7 @@ def add_2x2_matrix(slide, x, y, w, h, x_axis_label, y_axis_label, quadrants):
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 
@@ -741,6 +739,8 @@ def build_deck():
     prs = Presentation('references/松尾研究所テンプレ_v2_DLしてお使いください.pptx')
 
     # 既存スライドを全削除
+    # Note: python-pptx にはスライド削除の公式APIがないため、
+    # 内部XMLを直接操作している。python-pptx 1.0.2 で動作確認済み。
     while len(prs.slides._sldIdLst) > 0:
         rId = prs.slides._sldIdLst[0].get(qn('r:id'))
         prs.part.drop_rel(rId)

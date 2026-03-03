@@ -12,7 +12,7 @@
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 
@@ -131,7 +131,11 @@ def add_number_badge(slide, x, y, num, size=None):
 
 
 def clear_existing_slides(prs):
-    """テンプレートの既存スライドを全削除"""
+    """テンプレートの既存スライドを全削除
+
+    Note: python-pptx にはスライド削除の公式APIがないため、
+    内部XMLを直接操作している。python-pptx 1.0.2 で動作確認済み。
+    """
     while len(prs.slides._sldIdLst) > 0:
         rId = prs.slides._sldIdLst[0].get(qn('r:id'))
         prs.part.drop_rel(rId)
@@ -216,7 +220,14 @@ def add_styled_table(slide, headers, rows, x=None, y=None, w=None, col_widths=No
 # === プレゼンテーション構築 ===
 
 def build_deck():
+    import os
+    import sys
+
     template_path = ".claude/skills/slides-maker/references/松尾研究所テンプレ_v2_DLしてお使いください.pptx"
+    if not os.path.exists(template_path):
+        print(f"エラー: テンプレートが見つかりません: {template_path}")
+        print("プロジェクトルートから実行してください。")
+        sys.exit(1)
     prs = Presentation(template_path)
 
     # 既存スライドを全削除
@@ -226,10 +237,9 @@ def build_deck():
     # スライド1: タイトルスライド
     # ──────────────────────────────────────────────
     add_title_slide(prs,
-        title="企業規模別AIツール導入ロードマップ",
-        client_name="共同研究先 御中",
+        title="松尾研究所におけるAIツール導入ロードマップ",
         date="2026/03/02",
-        department="松尾研究所 MLシステム開発部門",
+        department="松尾研究所 MLシステム開発チーム",
         author="岡田"
     )
 
@@ -242,16 +252,18 @@ def build_deck():
         "3段階ロードマップ ─ Stage A / B / C の役割分担",
         "カテゴリ別推奨マトリクス ─ 13カテゴリ×3ステージ",
         "規模帯別推奨ツール早見表",
-        "展開順序とガバナンス ─ 推奨ネクストステップ",
+        "松尾研の現在地 ─ 現状のツール利用状況とステージ判定",
+        "想定される課題と乗り越え方",
+        "展開順序とガバナンス ─ ネクストステップ",
     ]
     for i, item in enumerate(agenda_items):
-        yBase = L.contentY + Inches(0.35) + Inches(i * 0.80)
-        badgeSize = Inches(0.45)
+        yBase = L.contentY + Inches(0.20) + Inches(i * 0.65)
+        badgeSize = Inches(0.40)
         add_number_badge(slide2, L.contentX + Inches(0.3), yBase, i + 1, badgeSize)
         # テキストボックス（ボーダー付き）
         shape = slide2.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            L.contentX + Inches(0.95), yBase, Inches(10.0), badgeSize
+            L.contentX + Inches(0.88), yBase, Inches(10.0), badgeSize
         )
         shape.fill.background()
         shape.line.color.rgb = C.textBlack
@@ -262,7 +274,7 @@ def build_deck():
         p.alignment = PP_ALIGN.LEFT
         run = p.add_run()
         run.text = item
-        set_font(run, "Hiragino Kaku Gothic Pro W3", 16, bold=True, color=C.textBlack)
+        set_font(run, "Hiragino Kaku Gothic Pro W3", 14, bold=True, color=C.textBlack)
 
     # ──────────────────────────────────────────────
     # スライド3: セクション区切り
@@ -275,7 +287,7 @@ def build_deck():
     slide4 = add_free_content_slide(prs,
         title="「点→線→面」の段階展開が、AI導入の成功確率を最大化する",
         source_text="各社公式サイト・料金ページの公開情報に基づく整理（2026年2月時点）",
-        page_num=3
+        page_num=4
     )
 
     dY = L.contentY + Inches(0.10)
@@ -365,7 +377,7 @@ def build_deck():
     slide6 = add_free_content_slide(prs,
         title="13カテゴリ×3ステージで最適ツールを配置する（前半7カテゴリ）",
         source_text="各社公式サイト・料金ページの公開情報（2026年2月時点）",
-        page_num=4
+        page_num=6
     )
     add_styled_table(slide6,
         ["カテゴリ", "Stage A: 小規模（専用ツール）", "Stage B: Google＋Gemini", "Stage C: Microsoft＋Copilot"],
@@ -389,7 +401,7 @@ def build_deck():
     slide7 = add_free_content_slide(prs,
         title="13カテゴリ×3ステージで最適ツールを配置する（後半6カテゴリ）",
         source_text="各社公式サイト・料金ページの公開情報（2026年2月時点）",
-        page_num=5
+        page_num=7
     )
     add_styled_table(slide7,
         ["カテゴリ", "Stage A: 小規模（専用ツール）", "Stage B: Google＋Gemini", "Stage C: Microsoft＋Copilot"],
@@ -441,7 +453,7 @@ def build_deck():
     slide9 = add_free_content_slide(prs,
         title="各Stageで「何を主軸に」「何を専用ツールとして残すか」を明確化する",
         source_text="各社公式サイト・料金ページの公開情報に基づく整理（2026年2月時点）",
-        page_num=6
+        page_num=9
     )
 
     stage_details = [
@@ -529,17 +541,166 @@ def build_deck():
                      st["keep"], "Hiragino Kaku Gothic Pro W3", 9, color=C.textDark)
 
     # ──────────────────────────────────────────────
-    # スライド10: セクション区切り
+    # スライド10: セクション区切り — 松尾研の現在地 【新規】
     # ──────────────────────────────────────────────
-    add_section_slide(prs, "4. 展開順序とガバナンス")
+    add_section_slide(prs, "4. 松尾研の現在地")
 
     # ──────────────────────────────────────────────
-    # スライド11: 展開順序
+    # スライド11: 松尾研の現状ツール利用状況とステージ判定 【新規】
+    # ──────────────────────────────────────────────
+    slide11_new = add_free_content_slide(prs,
+        title="松尾研のツール利用は「点」の段階 ─ Stage Bへの移行が次の一手",
+        page_num=11
+    )
+
+    # 左カラム: 現状のツール利用状況
+    lx = L.contentX
+    ly = L.contentY + Inches(0.10)
+    add_header_bar(slide11_new, lx, ly, L.col2W, "現状のツール利用状況")
+
+    current_tools = [
+        ("Notion", "ナレッジ・プロジェクト管理"),
+        ("Slack", "コミュニケーション"),
+        ("Google Workspace", "メール・カレンダー・Drive"),
+        ("GitHub / Cursor / Claude Code", "開発支援"),
+        ("ChatGPT / Claude", "文書ドラフト・分析"),
+        ("Zoom / Google Meet", "会議"),
+    ]
+    add_styled_table(slide11_new,
+        ["ツール", "用途"],
+        current_tools,
+        x=lx, y=ly + Inches(0.48), w=L.col2W,
+        col_widths=[2.8, 2.98],
+        header_font_size=11, body_font_size=10
+    )
+
+    # 右カラム: ステージ判定
+    rx = L.col2RightX
+    ry = ly
+    add_header_bar(slide11_new, rx, ry, L.col2W, "ステージ判定")
+
+    # 現在
+    sj_y = ry + Inches(0.58)
+    badge_current = slide11_new.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                                  rx + Inches(0.10), sj_y,
+                                                  Inches(1.0), Inches(0.35))
+    badge_current.fill.solid()
+    badge_current.fill.fore_color.rgb = C.accent5
+    badge_current.line.fill.background()
+    tf = badge_current.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "現在"
+    set_font(run, "Hiragino Kaku Gothic Pro W3", 12, bold=True, color=C.textWhite)
+
+    add_text_box(slide11_new, rx + Inches(1.25), sj_y, Inches(4.4), Inches(0.35),
+                 "Stage A寄り（専用ツールの「点」利用が中心）",
+                 "Hiragino Kaku Gothic Pro W3", 12, bold=True, color=C.textBlack)
+
+    # 課題
+    sj_y2 = sj_y + Inches(0.55)
+    badge_issue = slide11_new.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                                rx + Inches(0.10), sj_y2,
+                                                Inches(1.0), Inches(0.35))
+    badge_issue.fill.solid()
+    badge_issue.fill.fore_color.rgb = C.accent2
+    badge_issue.line.fill.background()
+    tf = badge_issue.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "課題"
+    set_font(run, "Hiragino Kaku Gothic Pro W3", 12, bold=True, color=C.textWhite)
+
+    add_text_box(slide11_new, rx + Inches(1.25), sj_y2, Inches(4.4), Inches(0.70),
+                 "ツール間の連携が弱く、成果物の保存先がバラバラ\n（Notion / Drive / ローカル が混在）",
+                 "Hiragino Kaku Gothic Pro W3", 11, color=C.textDark)
+
+    # 目指す姿
+    sj_y3 = sj_y2 + Inches(0.85)
+    badge_goal = slide11_new.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                               rx + Inches(0.10), sj_y3,
+                                               Inches(1.0), Inches(0.35))
+    badge_goal.fill.solid()
+    badge_goal.fill.fore_color.rgb = C.accent6
+    badge_goal.line.fill.background()
+    tf = badge_goal.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "目指す姿"
+    set_font(run, "Hiragino Kaku Gothic Pro W3", 11, bold=True, color=C.textWhite)
+
+    add_text_box(slide11_new, rx + Inches(1.25), sj_y3, Inches(4.4), Inches(0.70),
+                 "Stage Bへの移行\nGoogle Workspace + Gemini中心の「線」の最適化",
+                 "Hiragino Kaku Gothic Pro W6", 12, bold=True, color=C.accent6)
+
+    # 補足: 移行イメージ矢印
+    arrow_y = sj_y3 + Inches(1.0)
+    arrow_shape = slide11_new.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                                rx + Inches(0.10), arrow_y,
+                                                L.col2W - Inches(0.20), Inches(0.40))
+    arrow_shape.fill.solid()
+    arrow_shape.fill.fore_color.rgb = C.bgLight
+    arrow_shape.line.fill.background()
+    tf = arrow_shape.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "Stage A（点）  →  Stage B（線）  →  Stage C（面）"
+    set_font(run, "Hiragino Kaku Gothic Pro W3", 11, bold=True, color=C.tx2)
+
+    # ──────────────────────────────────────────────
+    # スライド12: セクション区切り — 想定される課題と乗り越え方 【新規】
+    # ──────────────────────────────────────────────
+    add_section_slide(prs, "5. 想定される課題と乗り越え方")
+
+    # ──────────────────────────────────────────────
+    # スライド13: 課題5項目テーブル + 乗り越え方 【新規】
+    # ──────────────────────────────────────────────
+    slide13 = add_free_content_slide(prs,
+        title="導入の壁を事前に想定し、段階的に乗り越える",
+        page_num=13
+    )
+
+    add_styled_table(slide13,
+        ["課題", "具体的な壁", "乗り越え方"],
+        [
+            ["既存ワークフロー\nとの摩擦",
+             "既存ツール（グループウェア・ファイル\nサーバー等）の運用が定着しており、\nDrive/SharePointへの移行は大きな変更コスト",
+             "既存ツールを残しつつクラウド\nストレージを「保存先」として併用。\n段階的にDrive/OneDrive中心へ移行"],
+            ["コスト・予算\nの確保",
+             "Gemini/Copilotのライセンス費\n（$20〜30/人/月）、PoC期間の\n既存ツールとの二重運用コスト",
+             "少人数（5〜10名）のパイロット\nチームで効果検証し、\nROIを定量化してから全社拡大"],
+            ["セキュリティ・\nデータ統制",
+             "社内機密情報・顧客データのAI送信\nに関する情報セキュリティポリシー\nとの整合性、データ漏洩リスク",
+             "ツールごとの学習/保持ポリシーを\n整理し、利用可能な範囲を明文化。\n機密度に応じた3段階ルールを設定"],
+            ["定着・教育\nコスト",
+             "現場社員は多忙で新ツール習得の\n時間が限られる。「使う人」と\n「使わない人」の二極化リスク",
+             "「会議AI」「メールAI」など日常\n業務に直結する領域から開始し、\n初期成功体験を社内で共有"],
+            ["効果測定\nの難しさ",
+             "ホワイトカラー業務の生産性は\n定量化しにくい（企画の質、\n意思決定の速度等）",
+             "定量指標（会議議事録作成時間、\nメール処理時間）と定性指標\n（満足度アンケート）を併用"],
+        ],
+        y=L.contentY + Inches(0.08),
+        col_widths=[1.8, 4.2, 5.95],
+        header_font_size=11, body_font_size=9
+    )
+
+    # ──────────────────────────────────────────────
+    # スライド14: セクション区切り — 展開順序とガバナンス
+    # ──────────────────────────────────────────────
+    add_section_slide(prs, "6. 展開順序とガバナンス")
+
+    # ──────────────────────────────────────────────
+    # スライド15: 展開順序 + ガバナンス
     # ──────────────────────────────────────────────
     slide11 = add_free_content_slide(prs,
         title="「機能から」ではなく「統制から」始めることが、展開の失敗確率を下げる",
         source_text="Google Workspace/Microsoft 365 公式ドキュメント・料金ページに基づく整理",
-        page_num=7
+        page_num=15
     )
 
     eoY = L.contentY + Inches(0.10)
@@ -601,12 +762,12 @@ def build_deck():
                      g_desc, "Hiragino Kaku Gothic Pro W3", 10, color=C.textDark)
 
     # ──────────────────────────────────────────────
-    # スライド12: 推奨ネクストステップ（まとめ）
+    # スライド16: 推奨ネクストステップ（まとめ）
     # ──────────────────────────────────────────────
     slide12 = add_free_content_slide(prs,
-        title="まず「会議AI」と「メールAI」でQuick Winを創出し、段階的に全社展開する",
-        source_text="松尾研究所 AIコーディング推進チーム提案",
-        page_num=8
+        title="MLシステム開発チームをパイロットに、会議AI・メールAIからQuick Winを創出する",
+        source_text="松尾研究所 MLシステム開発チーム",
+        page_num=16
     )
 
     # サマリーKPI
@@ -639,20 +800,20 @@ def build_deck():
     add_header_bar(slide12, L.contentX, nsY, L.contentW, "推奨ネクストステップ")
 
     next_steps = [
-        ("1", "痛点カテゴリの選定",
-         "会議・メール・資料・採用/サポートのうち、最も工数が大きい2〜4カテゴリを特定し、Stage Aの対象を決定",
+        ("1", "松尾研の痛点カテゴリ選定",
+         "会議AI・メールAI・ナレッジ検索を候補に、最も工数が大きい2〜3カテゴリを特定",
          "1週間以内"),
-        ("2", "Stage Aツール導入・PoC",
-         "選定した2〜4ツールでPoCを実施。「週次の削減時間」と「作業品質（ミス/抜け漏れ）」で効果測定",
+        ("2", "パイロットチーム（MLシステム開発チーム）でPoC開始",
+         "選定ツールでPoCを実施。「週次の削減時間」と「作業品質」で効果測定し、ROIを定量化",
          "2ヶ月以内"),
-        ("3", "保存先/フォーマット統一ルール策定",
-         "成果物の保存先（Drive/OneDrive）とフォーマット（Docs/DOCX/PDF等）を統一し、後段の移行コストを最小化",
+        ("3", "保存先の統一ルール策定",
+         "Notion＋Driveの併用ルールを整備し、成果物の保存先とフォーマットを段階的に統一",
          "1ヶ月以内"),
-        ("4", "ガバナンス基盤構築",
-         "機密データ取り扱い方針、コネクタ/DLP設計、外部データ共有の同意フローを整備してからStage B/Cへ展開",
+        ("4", "セキュリティ・学習ポリシーの明文化",
+         "研究データ・論文草稿のAI送信ルールを整理し、大学IT規定との整合性を確認",
          "2ヶ月以内"),
-        ("5", "Stage B/C移行計画の策定",
-         "Google Workspace or Microsoft 365の選定基準を明確化し、移行スケジュール・予算・教育プログラムを策定",
+        ("5", "Stage B移行計画の策定",
+         "Google Workspace＋Gemini中心の「線」の最適化に向け、移行スケジュール・予算・教育プランを策定",
          "3ヶ月以内"),
     ]
     for i, (num, step_title, step_desc, timing) in enumerate(next_steps):
