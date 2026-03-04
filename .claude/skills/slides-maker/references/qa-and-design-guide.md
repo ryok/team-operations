@@ -80,7 +80,7 @@ Report ALL issues found, including minor ones.
 スライドを個別画像に変換して目視検査する：
 
 ```bash
-python scripts/office/soffice.py --headless --convert-to pdf output.pptx
+soffice --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
 
@@ -95,7 +95,7 @@ pdftoppm -jpeg -r 150 -f N -l N output.pdf slide-fixed
 ### 依存ツール
 
 - `pip install "markitdown[pptx]"` — テキスト抽出
-- LibreOffice (`soffice`) — PDF変換（`scripts/office/soffice.py` 経由）
+- LibreOffice (`soffice`) — PDF変換
 - Poppler (`pdftoppm`) — PDFから画像
 
 ---

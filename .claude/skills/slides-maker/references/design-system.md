@@ -27,7 +27,7 @@ python-pptxを使用して松尾研究所テンプレート準拠のプレゼン
 
 ```python
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
@@ -147,7 +147,7 @@ class C:
     accent3     = RGBColor(0xA5, 0xA5, 0xA5)    # グレー
     accent4     = RGBColor(0xFF, 0xC0, 0x00)    # イエロー
     accent5     = RGBColor(0x44, 0x72, 0xC4)    # ブルー（チャートプライマリ）
-    accent6     = RGBColor(0x70, 0xAD, 0x47)    # グリーン
+    accent6     = RGBColor(0x70, 0xAD, 0x47)    # グリーン / ポジティブデルタ
 
     # 派生カラー
     accent4Dark  = RGBColor(0xBF, 0x90, 0x00)   # ゴールドヘッダーバー
@@ -158,7 +158,7 @@ class C:
 
     # アクセント
     accentRed   = RGBColor(0xC8, 0x10, 0x2E)    # アラート、ネガティブデルタ
-    accentGreen = RGBColor(0x70, 0xAD, 0x47)    # ポジティブデルタ
+    # accentGreen は accent6 と同値のため削除
 
     # 構造
     gridLine    = RGBColor(0xD0, 0xD0, 0xD0)    # テーブルボーダー、フレームワークライン
@@ -170,8 +170,11 @@ C_HEX = {
     "textBlack": "000000", "textDark": "333333", "textMuted": "888888",
     "tx2": "44546A", "accent1": "5B9BD5", "accent2": "ED7D31",
     "accent3": "A5A5A5", "accent4": "FFC000", "accent5": "4472C4",
+    "textWhite": "FFFFFF",
     "accent6": "70AD47", "accent5Dark": "334F93", "accentRed": "C8102E",
-    "gridLine": "D0D0D0",
+    "accent4Dark": "BF9000", "accent4Light": "FFD966",
+    "accent2Dark": "B25C25", "tx2Dark": "333D4F",
+    "gridLine": "D0D0D0", "separator": "000000",
 }
 ```
 
@@ -428,11 +431,7 @@ def add_text_box(slide, x, y, w, h, text, font_name="Hiragino Kaku Gothic Pro W3
     p.alignment = align
     run = p.add_run()
     run.text = text
-    run.font.name = font_name
-    run.font.size = Pt(font_size)
-    run.font.bold = bold
-    if color:
-        run.font.color.rgb = color
+    set_font(run, font_name, font_size, bold, color)
     return txBox
 ```
 
@@ -585,7 +584,7 @@ CHART_COLORS = [
 ### 松尾研テンプレート準拠テーブル
 
 ```python
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 
 def add_styled_table(slide, headers, rows, x=None, y=None, w=None, col_widths=None,
                      header_font_size=12, body_font_size=10):
@@ -707,7 +706,7 @@ def add_2x2_matrix(slide, x, y, w, h, x_axis_label, y_axis_label, quadrants):
 
 ```python
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
