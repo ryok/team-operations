@@ -83,3 +83,4 @@ dmypy.json
 # Claude Code
 .claude/settings.local.json
 WARP.md
+generate-slides.py
