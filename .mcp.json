@@ -4,6 +4,11 @@
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
     },
+    "drawio": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@drawio/mcp"]
+    },
     "slack_local": {
       "type": "stdio",
       "command": "npx",
