@@ -13,14 +13,27 @@ description: |
 ## Prerequisites
 
 - **UTokyo VPN接続**: 学内ネットワークまたはVPN接続が必要
-- **agent-browser**: ブラウザ自動化CLIツール
+- **agent-browser**: ブラウザ自動化CLIツール（Chromiumインストール済みであること）
 - **Microsoft認証**: UTokyo Accountでのログインが必要（初回のみ手動）
+
+### Chromiumのセットアップ
+
+agent-browserで`Executable doesn't exist`エラーが出る場合、Chromiumをインストールする：
+
+```bash
+cd /opt/homebrew/lib/node_modules/agent-browser && npm install
+PLAYWRIGHT_BROWSERS_PATH=/opt/homebrew/lib/node_modules/agent-browser/node_modules/playwright-core/.local-browsers \
+  npx --prefix /opt/homebrew/lib/node_modules/agent-browser playwright install chromium
+```
 
 ## 重要な制約
 
 1. **Playwrightの内蔵Chromiumはシステム VPN を経由しないことがある**。接続エラー（`net::ERR_SOCKET_NOT_CONNECTED`）が出る場合は `--headed` オプションで再試行する（一時的な接続問題のことが多い）
 2. **Microsoft認証は手動が必要**: 初回アクセス時にMicrosoftログインページにリダイレクトされる。ユーザーにブラウザでログインしてもらう
 3. **`--headed` モードを使用する**: ユーザーがログイン操作を行えるよう、ヘッドレスではなくheadedモードでブラウザを起動する
+4. **`select`コマンドはrefを壊すことがある**: ドロップダウンの選択には`agent-browser select`ではなく**JavaScript eval**を使うこと（後述）
+5. **バッチ処理でのrefキャッシュ**: シェルスクリプトでループ処理する場合、各アクション後に必ず`snapshot -i`でrefを再取得すること。バックグラウンド実行やパイプ処理ではrefが古くなり失敗する
+6. **セッションタイムアウト**: 長時間操作しないとセッションが切れる。「再ログイン」リンクが表示されたらクリックして再認証する
 
 ## サイト構造
 
@@ -51,8 +64,29 @@ agent-browser --headed open https://ut-ppsweb.adm.u-tokyo.ac.jp/cws/cws
 
 1. メインメニューから「**勤務表**」をクリック
 2. 当月の勤務表が表示される
-3. スクロールしてテーブル全体をスクリーンショットで確認
-4. 「打刻時間」列を確認し、出勤日で打刻が欠けている日を特定する
+3. **スクリーンショットではなくJavaScript evalでテーブルデータを抽出する**（画像では打刻時間を正確に読み取れないため）
+
+```bash
+agent-browser eval "
+const rows = document.querySelectorAll('table tr');
+const results = [];
+rows.forEach(r => {
+  const cells = r.querySelectorAll('td');
+  if (cells.length >= 5) {
+    const day = cells[0]?.innerText?.trim();
+    const dow = cells[1]?.innerText?.trim();
+    const kind = cells[2]?.innerText?.trim();
+    const stamp = cells[3]?.innerText?.trim();
+    if (day && day.match(/^\\d+\\//)) {
+      results.push(day + ' ' + dow + ' ' + kind + ' | 打刻: [' + stamp + ']');
+    }
+  }
+});
+results.join('\\n');
+"
+```
+
+4. 出力から打刻漏れを特定する
 
 **打刻漏れのパターン**:
 
@@ -71,41 +105,71 @@ agent-browser --headed open https://ut-ppsweb.adm.u-tokyo.ac.jp/cws/cws
 
 打刻漏れのある日をリストアップし、ユーザーに以下を確認する：
 - 打刻漏れ一覧の正確性
-- メモに記載する出勤・退勤時刻（例: 出勤漏れは一律9:30、退勤漏れは一律18:00 など）
+- **未来の日付は除外する**（まだ勤務していないため）
+- **出張情報がある日は除外する**（出張は打刻不要の場合がある）
+- メモに記載する出勤・退勤時刻（例: 出勤漏れは一律9:29、退勤漏れは一律18:01 など）
 
 ### Step 4: 勤務状況メモを登録
 
 1. 「**就労メインページ**」→「**就労申請**」→「**勤務状況メモ入力**」に遷移
-2. フォームの構造:
-   - `e3`: 年テキストボックス（通常変更不要）
-   - `e4`: 月ドロップダウン（combobox）
-   - `e18`: 日ドロップダウン（combobox, nth=1）
-   - `e51`: 勤務状況メモテキストボックス（nth=1）
-   - `e52`: 「次へ」ボタン
-3. 各日について以下を繰り返す:
+2. フォームの構造（ref番号は都度 `snapshot -i` で確認すること）:
+   - 年テキストボックス（通常変更不要）
+   - 月ドロップダウン（combobox）
+   - 日ドロップダウン（combobox, nth=1）
+   - 勤務状況メモテキストボックス（nth=1）
+   - 「次へ」ボタン
+3. **各日を1件ずつ、個別のコマンドで処理する**（バッチ/ループ処理はrefの不整合で失敗しやすいため）
+
+#### 日付ドロップダウンの選択方法（重要）
+
+**`agent-browser select` コマンドはドロップダウン操作後にrefが無効化される問題がある。代わりにJavaScript evalで値をセットすること：**
 
 ```bash
-# フォーム入力
-agent-browser select @e18 "{日}"
-agent-browser fill @e51 "{メモ内容}"
-agent-browser click @e52
+# NG: selectコマンドはrefを壊す
+# agent-browser select @e18 "05"
 
-# 確認画面で送信
-agent-browser wait --load networkidle
-agent-browser snapshot -i  # e4が「送信」ボタン
-agent-browser click @e4
+# OK: JavaScript evalで直接値をセット
+agent-browser eval "document.querySelectorAll('select')[1].value = '05'; document.querySelectorAll('select')[1].dispatchEvent(new Event('change'))"
+```
+
+`document.querySelectorAll('select')[1]` は日ドロップダウン（2番目のselect要素）を指す。月ドロップダウンは `[0]`。
+
+#### 1件のメモ登録フロー
+
+```bash
+# 1. 日付をJS evalでセット
+agent-browser eval "document.querySelectorAll('select')[1].value = '{日}'; document.querySelectorAll('select')[1].dispatchEvent(new Event('change'))"
+
+# 2. snapshot -i でrefを再取得（eval後はrefがリセットされている可能性あり）
+agent-browser snapshot -i
+# → メモテキストボックスとボタンのrefを確認
+
+# 3. メモを入力して「次へ」
+agent-browser fill @e51 "{メモ内容}"   # ref番号は都度確認
+agent-browser click @e52               # ref番号は都度確認
 agent-browser wait --load networkidle
 
-# 完了画面から就労申請に戻る
-agent-browser snapshot -i  # e4が「就労申請」リンク
-agent-browser click @e4
+# 4. 確認画面で「送信」
+agent-browser snapshot -i
+agent-browser click @e4                # 「送信」ボタン（ref番号は都度確認）
 agent-browser wait --load networkidle
 
-# 次の日のために再度「勤務状況メモ入力」をクリック
-agent-browser snapshot -i  # e3が「勤務状況メモ入力」リンク
-agent-browser click @e3
+# 5. 完了画面から「就労申請」に戻る
+agent-browser snapshot -i
+agent-browser click @e4                # 「就労申請」リンク（ref番号は都度確認）
+agent-browser wait --load networkidle
+
+# 6. 「勤務状況メモ入力」をクリックして次の日へ
+agent-browser snapshot -i
+agent-browser click @e3                # 「勤務状況メモ入力」リンク（ref番号は都度確認）
 agent-browser wait --load networkidle
 ```
+
+#### バッチ処理の注意点
+
+- **バックグラウンド実行やシェルスクリプトのループは避ける**。agent-browserのデーモンに対する並行アクセスで`Resource temporarily unavailable`エラーが発生する
+- 各日を**1件ずつ順番にコマンドを実行**する。各ステップの間で必ず`snapshot -i`でrefを再取得する
+- 失敗した場合は、まず現在のページ状態を`snapshot -i`で確認してからリトライする
 
 **メモ内容のフォーマット**:
 - 出勤漏れ: `打刻漏れ。実際は{時刻}に出勤`
@@ -147,6 +211,13 @@ agent-browser wait --load networkidle
 
 ## トラブルシューティング
 
+### Chromiumが見つからない（Executable doesn't exist）
+```bash
+cd /opt/homebrew/lib/node_modules/agent-browser && npm install
+PLAYWRIGHT_BROWSERS_PATH=/opt/homebrew/lib/node_modules/agent-browser/node_modules/playwright-core/.local-browsers \
+  npx --prefix /opt/homebrew/lib/node_modules/agent-browser playwright install chromium
+```
+
 ### 接続エラー（ERR_SOCKET_NOT_CONNECTED）
 - VPN接続を確認
 - `agent-browser close` してから `--headed` で再試行
@@ -156,6 +227,21 @@ agent-browser wait --load networkidle
 - `--headed` オプションを付けているか確認
 - 既存セッションがある場合は `agent-browser close` してから再起動
 
-### ref番号が無効
+### ref番号が無効（Unsupported token "@eXX"）
 - ページ遷移後は必ず `agent-browser snapshot -i` で新しいrefを取得
 - フォーム送信後のページ変更で古いrefは無効になる
+- **`select`コマンドの実行後もrefが壊れる**。selectの代わりにJS evalを使うこと
+
+### Resource temporarily unavailable（os error 35）
+- agent-browserデーモンへの並行アクセスが原因
+- **バッチ処理やバックグラウンド実行を避ける**
+- 発生した場合は数秒待ってから `snapshot -i` で状態を確認し、リトライする
+
+### セッションタイムアウト
+- 長時間操作しないとCWSのセッションが切れる
+- `snapshot -i` で「再ログイン」リンクが表示されたらクリックする
+- Microsoft認証のセッションが残っていれば自動でメインメニューに戻る
+
+### 誤って不要なメモを登録してしまった場合
+- 「就労申請」→「勤務状況メモ取消」から取り消し可能
+- ドロップダウンから対象のメモ（番号と日付で特定）を選択して取り消す
